@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 public final class BotSession implements BehaviorTarget {
@@ -55,6 +56,7 @@ public final class BotSession implements BehaviorTarget {
     private final BotEventLog events;
     private final Consumer<BotEvent> eventSink;
     private final BooleanSupplier maintenanceBlocked;
+    private final Supplier<Optional<String>> currentServer;
     private final AtomicReference<BotState> state = new AtomicReference<>(BotState.STOPPED);
     private final AtomicBoolean manualStop = new AtomicBoolean(true);
     private final AtomicBoolean authenticationInterventionRequired = new AtomicBoolean();
@@ -121,6 +123,15 @@ public final class BotSession implements BehaviorTarget {
                ProtocolResolver protocolResolver, TransportRegistry transportRegistry,
                ConnectionRateLimiter connectionRateLimiter, ScheduledExecutorService executor,
                Logger logger, Consumer<BotEvent> eventSink, BooleanSupplier maintenanceBlocked) {
+        this(definition, endpoint, runtime, protocolResolver, transportRegistry, connectionRateLimiter,
+            executor, logger, eventSink, maintenanceBlocked, null);
+    }
+
+    BotSession(BotDefinition definition, ProxyEndpoint endpoint, RuntimeConfig runtime,
+               ProtocolResolver protocolResolver, TransportRegistry transportRegistry,
+               ConnectionRateLimiter connectionRateLimiter, ScheduledExecutorService executor,
+               Logger logger, Consumer<BotEvent> eventSink, BooleanSupplier maintenanceBlocked,
+               Supplier<Optional<String>> currentServer) {
         this.definition = definition;
         this.endpoint = endpoint;
         this.runtime = runtime;
@@ -131,6 +142,7 @@ public final class BotSession implements BehaviorTarget {
         this.logger = logger;
         this.eventSink = eventSink == null ? ignored -> { } : eventSink;
         this.maintenanceBlocked = maintenanceBlocked == null ? () -> false : maintenanceBlocked;
+        this.currentServer = currentServer;
         this.events = new BotEventLog(definition.id());
         this.reconnectPolicy = new ReconnectPolicy(runtime.reconnect());
         this.reconnectStability = new ReconnectStabilityGate(executor,
@@ -569,7 +581,8 @@ public final class BotSession implements BehaviorTarget {
                 else if (serverSwitchPending.get() && isConfirmedServerTransition()) {
                     completeServerSwitch(currentGeneration);
                 }
-                else if (authenticationOutcome.succeeded() && authenticationContinuationApplied.get()) {
+                else if (!serverSwitchPending.get() && authenticationOutcome.succeeded()
+                    && authenticationContinuationApplied.get()) {
                     behavior.onReady();
                 }
             }
@@ -1085,7 +1098,7 @@ public final class BotSession implements BehaviorTarget {
         deferredChatAuthenticationPrompt.set(null);
         cancelAuthenticationTimeout();
         if (!definition.targetServer().isBlank() && !definition.serverSwitchCommand().isBlank()) {
-            if (playTransitionsThisConnection.get() > 1) {
+            if (currentServer == null && playTransitionsThisConnection.get() > 1) {
                 serverSwitchAttempts.set(0);
                 serverSwitchPending.set(true);
                 logger.info("Bot {} observed an authentication-plugin server transition before auth completion",
@@ -1121,6 +1134,12 @@ public final class BotSession implements BehaviorTarget {
                 250, TimeUnit.MILLISECONDS);
             return;
         }
+        // A same-server command has no CONFIGURATION/PLAY transition. AuthMe
+        // may also move the player before our first request or between retries.
+        if (isOnTargetServer()) {
+            completeServerSwitch(currentGeneration);
+            return;
+        }
         int attempt = serverSwitchAttempts.incrementAndGet();
         int maximumAttempts = definition.serverSwitchMaximumAttempts();
         if (maximumAttempts > 0 && attempt > maximumAttempts) {
@@ -1133,7 +1152,17 @@ public final class BotSession implements BehaviorTarget {
         }
         String command = CommandTemplate.render(definition.serverSwitchCommand(), definition);
         if (sendCommand(command)) {
-            logger.info("Bot {} requested server switch to {} (attempt {})",
+            if (attempt == 1) {
+                logger.info("Bot {} requested server switch to {} (attempt {})",
+                    definition.id(), definition.targetServer(), attempt);
+            }
+            else {
+                logger.debug("Bot {} requested server switch to {} (attempt {})",
+                    definition.id(), definition.targetServer(), attempt);
+            }
+        }
+        if (attempt % 20 == 0) {
+            logger.warn("Bot {} is still waiting for server {} after {} attempts",
                 definition.id(), definition.targetServer(), attempt);
         }
         long retryDelay = Math.max(250L, definition.serverSwitchDelayMillis());
@@ -1142,8 +1171,16 @@ public final class BotSession implements BehaviorTarget {
     }
 
     private boolean isConfirmedServerTransition() {
+        if (currentServer != null) {
+            return isOnTargetServer();
+        }
         return activeProtocolVersion == ProtocolVersion.MINECRAFT_1_16_5
             || serverSwitchTransitionSeen.get();
+    }
+
+    private boolean isOnTargetServer() {
+        return currentServer != null && currentServer.get()
+            .filter(server -> server.equalsIgnoreCase(definition.targetServer())).isPresent();
     }
 
     private void completeServerSwitch(long currentGeneration) {

@@ -131,7 +131,8 @@ public final class Bots4VeloPlugin implements Bots4VeloApi {
             messages = PluginMessages.load(dataDirectory, logger);
             managedBotStore = ManagedBotStore.load(dataDirectory);
             config = ConfigLoader.load(dataDirectory, managedBotStore.definitions());
-            manager = new BotManager(config, logger, new VelocityBackendProtocolDetector(proxy));
+            manager = new BotManager(config, logger, new VelocityBackendProtocolDetector(proxy),
+                this::currentServerByUsername);
             backendControlClient = createBackendControl(config, manager);
             proxy.getChannelRegistrar().register(BACKEND_CONTROL_CHANNEL);
             backendControlChannelRegistered = true;
@@ -221,7 +222,7 @@ public final class Bots4VeloPlugin implements Bots4VeloApi {
         VelocityBackendControlService replacementBackend = null;
         try {
             replacement = new BotManager(replacementConfig, logger,
-                new VelocityBackendProtocolDetector(proxy));
+                new VelocityBackendProtocolDetector(proxy), this::currentServerByUsername);
             replacement.pauseActivations();
             replacementBackend = createBackendControl(replacementConfig, replacement);
             registerOptionalIntegrations(replacement, replacementConfig);
@@ -678,7 +679,11 @@ public final class Bots4VeloPlugin implements Bots4VeloApi {
 
     private Optional<String> currentServer(BotManager owningManager, String botId) {
         return owningManager.find(botId)
-            .flatMap(session -> proxy.getPlayer(session.definition().username()))
+            .flatMap(session -> currentServerByUsername(session.definition().username()));
+    }
+
+    private Optional<String> currentServerByUsername(String username) {
+        return proxy.getPlayer(username)
             .flatMap(Player::getCurrentServer)
             .map(connection -> connection.getServerInfo().getName());
     }

@@ -17,11 +17,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 class GithubWorkflowTest {
     @Test
     void releaseDefaultsArePreparedForVersion302() throws Exception {
-        String build = Files.readString(Path.of("build.gradle.kts"));
-        String verifier = Files.readString(Path.of("scripts/verify-local-integration.ps1"));
-        String integration = Files.readString(Path.of("scripts/ci/run-network-integration.sh"));
-        String readme = Files.readString(Path.of("README.md"));
-        String chineseReadme = Files.readString(Path.of("README.zh-CN.md"));
+        String build = Files.readString(Path.of("build.gradle.kts")).replace("\r\n", "\n");
+        String verifier = Files.readString(Path.of("scripts/verify-local-integration.ps1")).replace("\r\n", "\n");
+        String integration = Files.readString(Path.of("scripts/ci/run-network-integration.sh")).replace("\r\n", "\n");
+        String readme = Files.readString(Path.of("README.md")).replace("\r\n", "\n");
+        String chineseReadme = Files.readString(Path.of("README.zh-CN.md")).replace("\r\n", "\n");
 
         assertThat(build).contains("orElse(\"3.0.2\")");
         assertThat(build)
@@ -54,7 +54,7 @@ class GithubWorkflowTest {
 
     @Test
     void majorReleaseWorkflowIsValidYamlAndKeepsReleaseGuards() throws Exception {
-        String workflow = Files.readString(Path.of(".github/workflows/build-major-release.yml"));
+        String workflow = Files.readString(Path.of(".github/workflows/build-major-release.yml")).replace("\r\n", "\n");
         Object parsed = new Yaml(new SafeConstructor(new LoaderOptions())).load(workflow);
 
         assertThat(parsed).isInstanceOf(Map.class);
@@ -76,7 +76,7 @@ class GithubWorkflowTest {
 
     @Test
     void normalBuildWorkflowValidatesCommitsAndPullRequests() throws Exception {
-        String workflow = Files.readString(Path.of(".github/workflows/build.yml"));
+        String workflow = Files.readString(Path.of(".github/workflows/build.yml")).replace("\r\n", "\n");
         Object parsed = new Yaml(new SafeConstructor(new LoaderOptions())).load(workflow);
 
         assertThat(parsed).isInstanceOf(Map.class);
@@ -103,7 +103,7 @@ class GithubWorkflowTest {
 
     @Test
     void integrationScriptUsesAValidVelocityAndPresenceConfiguration() throws Exception {
-        String script = Files.readString(Path.of("scripts/ci/run-network-integration.sh"));
+        String script = Files.readString(Path.of("scripts/ci/run-network-integration.sh")).replace("\r\n", "\n");
 
         assertThat(script)
             .contains("[forced-hosts]")
