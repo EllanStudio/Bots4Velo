@@ -30,12 +30,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public final class BotManager implements AutoCloseable {
     private final BotPluginConfig config;
     private final Logger logger;
     private final ScheduledExecutorService executor;
     private final ProtocolDetectionService protocolDetectionService;
+    private final Function<String, Optional<String>> currentServer;
     private final TransportRegistry transportRegistry;
     private final ConnectionRateLimiter connectionRateLimiter;
     private final Clock clock;
@@ -60,6 +62,13 @@ public final class BotManager implements AutoCloseable {
         this(config, logger, protocolDetectionService, Clock.systemUTC());
     }
 
+    public BotManager(BotPluginConfig config, Logger logger,
+                      ProtocolDetectionService protocolDetectionService,
+                      Function<String, Optional<String>> currentServer) {
+        this(config, logger, protocolDetectionService, Clock.systemUTC(),
+            (ignoredId, ignoredComplete) -> { }, currentServer);
+    }
+
     BotManager(BotPluginConfig config, Logger logger,
                ProtocolDetectionService protocolDetectionService, Clock clock) {
         this(config, logger, protocolDetectionService, clock, (ignoredId, ignoredComplete) -> { });
@@ -67,9 +76,16 @@ public final class BotManager implements AutoCloseable {
 
     BotManager(BotPluginConfig config, Logger logger, ProtocolDetectionService protocolDetectionService,
                Clock clock, BiConsumer<String, Boolean> activationDispatchObserver) {
+        this(config, logger, protocolDetectionService, clock, activationDispatchObserver, null);
+    }
+
+    private BotManager(BotPluginConfig config, Logger logger, ProtocolDetectionService protocolDetectionService,
+                       Clock clock, BiConsumer<String, Boolean> activationDispatchObserver,
+                       Function<String, Optional<String>> currentServer) {
         this.config = config;
         this.logger = logger;
         this.protocolDetectionService = protocolDetectionService;
+        this.currentServer = currentServer;
         this.clock = clock;
         this.activationDispatchObserver = Objects.requireNonNull(
             activationDispatchObserver, "activationDispatchObserver");
@@ -447,7 +463,8 @@ public final class BotManager implements AutoCloseable {
         ProtocolResolver resolver = new ProtocolResolver(config.proxy(), definition, protocolDetectionService);
         return new BotSession(definition, config.proxy(), config.runtime(), resolver,
             transportRegistry, connectionRateLimiter, executor, logger, this::publishEvent,
-            () -> closed.get() || maintenanceHolds.isHeld(definition.id()));
+            () -> closed.get() || maintenanceHolds.isHeld(definition.id()),
+            currentServer == null ? null : () -> currentServer.apply(definition.username()));
     }
 
     private void publishEvent(BotEvent event) {
