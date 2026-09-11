@@ -64,6 +64,13 @@ public final class BotSession implements BehaviorTarget {
     private final AtomicLong generation = new AtomicLong();
     private final AtomicBoolean loginSent = new AtomicBoolean();
     private final AtomicBoolean registerSent = new AtomicBoolean();
+    /**
+     * AuthMe may emit both account-state prompts on one connection. Once a
+     * credential command is submitted, keep the connection on that command
+     * path until it is reset or authenticated.
+     */
+    private final AtomicReference<AuthenticationUiType> authenticationCommandType =
+        new AtomicReference<>();
     private final AuthenticationOutcomeGate authenticationOutcome = new AuthenticationOutcomeGate();
     private final AtomicBoolean authenticationContinuationApplied = new AtomicBoolean();
     private final AuthenticationUiFlow authenticationUiFlow = new AuthenticationUiFlow();
@@ -505,6 +512,7 @@ public final class BotSession implements BehaviorTarget {
         connectedAt = null;
         loginSent.set(false);
         registerSent.set(false);
+        authenticationCommandType.set(null);
         authenticationOutcome.reset();
         authenticationContinuationApplied.set(false);
         authenticationUiFlow.reset();
@@ -662,6 +670,9 @@ public final class BotSession implements BehaviorTarget {
             }
             logger.info("Bot {} matched a registration prompt", definition.id());
             event("AUTH_PROMPT", "registration");
+            if (ignoreAuthenticationPrompt(AuthenticationUiType.REGISTER)) {
+                return;
+            }
             if (deferChatAuthenticationPrompt(AuthenticationUiType.REGISTER)) {
                 return;
             }
@@ -677,6 +688,9 @@ public final class BotSession implements BehaviorTarget {
             }
             logger.info("Bot {} matched a login prompt", definition.id());
             event("AUTH_PROMPT", "login");
+            if (ignoreAuthenticationPrompt(AuthenticationUiType.LOGIN)) {
+                return;
+            }
             if (deferChatAuthenticationPrompt(AuthenticationUiType.LOGIN)) {
                 return;
             }
@@ -692,7 +706,17 @@ public final class BotSession implements BehaviorTarget {
             lastPlayAt, Instant.now())) {
             return false;
         }
-        deferredChatAuthenticationPrompt.set(type);
+        AuthenticationUiType previous = deferredChatAuthenticationPrompt.get();
+        if (previous != null) {
+            if (previous != type) {
+                String detail = type.name() + " deferred=" + previous.name();
+                event("AUTH_PROMPT_IGNORED", detail);
+                logger.info("Bot {} ignored {} authentication prompt while waiting to submit {}",
+                    definition.id(), type, previous);
+            }
+            return true;
+        }
+        deferredChatAuthenticationPrompt.compareAndSet(null, type);
         logger.info("Bot {} deferred its {} chat prompt during the authentication UI detection grace",
             definition.id(), type);
         event("AUTH_PROMPT_DEFERRED", type.name());
@@ -816,6 +840,9 @@ public final class BotSession implements BehaviorTarget {
         if (!authenticationTypeExpected(mode, type)) {
             failAuthenticationUi(currentGeneration, stage,
                 type + " command UI is incompatible with auth mode " + mode);
+            return;
+        }
+        if (ignoreAuthenticationPrompt(type)) {
             return;
         }
         if (authenticationCommandUiTracker.wasSubmitted(type)) {
@@ -943,20 +970,57 @@ public final class BotSession implements BehaviorTarget {
         if (authenticationUiFlow.active()) {
             return false;
         }
-        return submitAuthenticationCommand(loginSent, () -> {
+        if (!claimAuthenticationCommand(AuthenticationUiType.LOGIN)) {
+            return false;
+        }
+        boolean submitted = submitAuthenticationCommand(loginSent, () -> {
             logger.info("Bot {} submitting its login command", definition.id());
             return sendCommand(CommandTemplate.render(definition.auth().loginCommand(), definition));
         });
+        releaseAuthenticationCommand(AuthenticationUiType.LOGIN, submitted);
+        return submitted;
     }
 
     private boolean sendRegister() {
         if (authenticationUiFlow.active()) {
             return false;
         }
-        return submitAuthenticationCommand(registerSent, () -> {
+        if (!claimAuthenticationCommand(AuthenticationUiType.REGISTER)) {
+            return false;
+        }
+        boolean submitted = submitAuthenticationCommand(registerSent, () -> {
             logger.info("Bot {} submitting its registration command", definition.id());
             return sendCommand(CommandTemplate.render(definition.auth().registerCommand(), definition));
         });
+        releaseAuthenticationCommand(AuthenticationUiType.REGISTER, submitted);
+        return submitted;
+    }
+
+    private boolean claimAuthenticationCommand(AuthenticationUiType type) {
+        AuthenticationUiType current = authenticationCommandType.get();
+        return current == null
+            ? authenticationCommandType.compareAndSet(null, type)
+            : current == type;
+    }
+
+    private void releaseAuthenticationCommand(AuthenticationUiType type, boolean submitted) {
+        boolean commandWasSubmitted = type == AuthenticationUiType.LOGIN
+            ? loginSent.get() : registerSent.get();
+        if (!submitted && !commandWasSubmitted) {
+            authenticationCommandType.compareAndSet(type, null);
+        }
+    }
+
+    private boolean ignoreAuthenticationPrompt(AuthenticationUiType type) {
+        AuthenticationUiType selected = authenticationCommandType.get();
+        if (selected == null || selected == type) {
+            return false;
+        }
+        String detail = type.name() + " already_submitted=" + selected.name();
+        event("AUTH_PROMPT_IGNORED", detail);
+        logger.info("Bot {} ignored {} authentication prompt after {} was submitted",
+            definition.id(), type, selected);
+        return true;
     }
 
     static boolean submitAuthenticationCommand(AtomicBoolean sent, BooleanSupplier sender) {
