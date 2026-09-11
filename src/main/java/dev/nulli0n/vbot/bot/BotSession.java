@@ -561,13 +561,11 @@ public final class BotSession implements BehaviorTarget {
                 }
                 if (firstPlay && authenticationOutcome.consumePrePlaySuccess()) {
                     logger.info("Bot {} accepted authentication success received before PLAY", definition.id());
-                    event("AUTHENTICATED", "success message received before PLAY");
                     scheduleAuthenticationSuccess(currentGeneration);
                 }
                 else if (authenticationUiFlow.credentialReadyOnPlay()) {
                     if (completeAuthenticationAfterSettle(currentGeneration)) {
                         logger.info("Bot {} completed authentication UI after entering PLAY", definition.id());
-                        event("AUTHENTICATED", lastAuthenticationUi.get() + " entered PLAY");
                     }
                 }
                 else if (firstPlay) {
@@ -610,27 +608,30 @@ public final class BotSession implements BehaviorTarget {
             return;
         }
         AuthenticationUiType prompted = deferredChatAuthenticationPrompt.getAndSet(null);
+        // AUTO is driven by the account-state prompt (or the structured
+        // AuthMe/AuthMeUI callback), never by a timer-based login->register
+        // guess.  A rental account can already be registered and AuthMe 6 can
+        // restore its session before this task runs; sending either command in
+        // that case races the plugin and leaves the session pending forever.
+        if (mode == AuthMode.AUTO && autoAuthenticationType(prompted).isEmpty()) {
+            event("AUTH_WAITING_FOR_PROMPT", "account state");
+            logger.info("Bot {} is waiting for an AuthMe login/register prompt", definition.id());
+            return;
+        }
         AuthenticationUiType selected = prompted != null && authenticationTypeExpected(mode, prompted)
             ? prompted
             : mode == AuthMode.REGISTER ? AuthenticationUiType.REGISTER : AuthenticationUiType.LOGIN;
         if (selected == AuthenticationUiType.REGISTER) {
-            sendRegister();
+            if (sendRegister()) {
+                event("AUTH_COMMAND_SUBMITTED", "register");
+                event("AUTH_WAITING_FOR_CONFIRMATION", "register");
+            }
             return;
         }
-        sendLogin();
-        if (mode == AuthMode.LOGIN) {
-            return;
+        if (sendLogin()) {
+            event("AUTH_COMMAND_SUBMITTED", "login");
+            event("AUTH_WAITING_FOR_CONFIRMATION", "login");
         }
-        executor.schedule(() -> runFallbackRegistration(currentGeneration),
-            definition.auth().fallbackRegisterDelayMillis(), TimeUnit.MILLISECONDS);
-    }
-
-    private synchronized void runFallbackRegistration(long currentGeneration) {
-        if (!shouldRunChatAuthentication(
-            isPlayable(currentGeneration), !authenticationOutcome.pending(), authenticationUiActive())) {
-            return;
-        }
-        sendRegister();
     }
 
     private synchronized void handleAuthMessage(long currentGeneration, String message) {
@@ -644,9 +645,7 @@ public final class BotSession implements BehaviorTarget {
         else if (matches(successMessages, message)) {
             logger.info("Bot {} matched an authentication success message", definition.id());
             if (isPlayable(currentGeneration)) {
-                if (completeAuthenticationAfterSettle(currentGeneration)) {
-                    event("AUTHENTICATED", "success message");
-                }
+                completeAuthenticationAfterSettle(currentGeneration);
             }
             else if (!playInitialized.get() && authenticationOutcome.succeedBeforePlay()) {
                 cancelAuthenticationTimeout();
@@ -665,7 +664,10 @@ public final class BotSession implements BehaviorTarget {
             if (deferChatAuthenticationPrompt(AuthenticationUiType.REGISTER)) {
                 return;
             }
-            sendRegister();
+            if (sendRegister()) {
+                event("AUTH_COMMAND_SUBMITTED", "register");
+                event("AUTH_WAITING_FOR_CONFIRMATION", "register");
+            }
         }
         else if (matches(loginPrompts, message)) {
             if (authenticationUiActive()) {
@@ -677,7 +679,10 @@ public final class BotSession implements BehaviorTarget {
             if (deferChatAuthenticationPrompt(AuthenticationUiType.LOGIN)) {
                 return;
             }
-            sendLogin();
+            if (sendLogin()) {
+                event("AUTH_COMMAND_SUBMITTED", "login");
+                event("AUTH_WAITING_FOR_CONFIRMATION", "login");
+            }
         }
     }
 
@@ -910,6 +915,10 @@ public final class BotSession implements BehaviorTarget {
             || (mode == AuthMode.REGISTER && type == AuthenticationUiType.REGISTER);
     }
 
+    static Optional<AuthenticationUiType> autoAuthenticationType(AuthenticationUiType prompted) {
+        return Optional.ofNullable(prompted);
+    }
+
     static boolean shouldRunChatAuthentication(boolean playable, boolean completed, boolean uiActive) {
         return playable && !completed && !uiActive;
     }
@@ -1093,6 +1102,7 @@ public final class BotSession implements BehaviorTarget {
         // budget. Start the stability window only once the post-auth flow is
         // actually applied while this transport remains in PLAY.
         reconnectStability.authenticationCompleted(currentGeneration);
+        event("AUTHENTICATED", "confirmed");
         authenticationUiFlow.complete();
         authenticationCommandUiActive.set(false);
         deferredChatAuthenticationPrompt.set(null);
@@ -1117,6 +1127,7 @@ public final class BotSession implements BehaviorTarget {
         serverSwitchAttempts.set(0);
         serverSwitchTransitionSeen.set(false);
         serverSwitchPending.set(true);
+        event("SERVER_SWITCH_REQUESTED", definition.targetServer());
         attemptServerSwitch(currentGeneration);
     }
 
@@ -1190,6 +1201,7 @@ public final class BotSession implements BehaviorTarget {
         cancelServerSwitchTaskOnly();
         logger.info("Bot {} confirmed server switch to {} after {} attempt(s)",
             definition.id(), definition.targetServer(), serverSwitchAttempts.get());
+        event("SERVER_SWITCH_ACCEPTED", definition.targetServer());
         event("SERVER_SWITCHED", definition.targetServer());
         scheduleAfterLoginCommands(currentGeneration, definition.serverSwitchDelayMillis());
     }

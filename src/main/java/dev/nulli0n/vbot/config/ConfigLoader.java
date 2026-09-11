@@ -49,6 +49,17 @@ public final class ConfigLoader {
             + "login successful|successful login|successfully logged|logged-in due to session reconnection|"
             + "login session continued|already logged in|^authenticated$|登录成功|注册成功|认证成功)"
     );
+    /**
+     * AuthMe's chat prompts are the account-state signal for AUTO mode.  Keep
+     * these defaults enabled when a bot omits the optional prompt lists (as the
+     * rental pool does); AUTO must never guess by sending login then register.
+     */
+    private static final List<String> DEFAULT_AUTH_LOGIN_PROMPTS = List.of(
+        "(?i)(please\\s+login|/login\\b|登录|登陆|请输入密码)"
+    );
+    private static final List<String> DEFAULT_AUTH_REGISTER_PROMPTS = List.of(
+        "(?i)(please\\s+register|/register\\b|注册|註冊|请注册)"
+    );
 
     private ConfigLoader() {
     }
@@ -205,10 +216,14 @@ public final class ConfigLoader {
                 longValue(auth, "login-delay-ms", 1_000, 0, 60_000),
                 longValue(auth, "fallback-register-delay-ms", 2_500, 0, 60_000),
                 longValue(auth, "after-auth-delay-ms", 1_500, 0, 60_000),
-                stringList(auth.get("login-prompts")),
-                stringList(auth.get("register-prompts")),
+                auth.containsKey("login-prompts")
+                    ? stringList(auth.get("login-prompts"))
+                    : DEFAULT_AUTH_LOGIN_PROMPTS,
+                auth.containsKey("register-prompts")
+                    ? stringList(auth.get("register-prompts"))
+                    : DEFAULT_AUTH_REGISTER_PROMPTS,
                 auth.containsKey("success-messages")
-                    ? stringList(auth.get("success-messages"))
+                    ? mergeAuthenticationSuccessMessages(stringList(auth.get("success-messages")))
                     : DEFAULT_AUTH_SUCCESS_MESSAGES,
                 stringList(auth.get("failure-messages")),
                 longValue(auth, "timeout-ms", 30_000, 0, 3_600_000),
@@ -267,6 +282,21 @@ public final class ConfigLoader {
             }
         }
         return bots;
+    }
+
+    /**
+     * Explicit success expressions are additive rather than a replacement for
+     * the built-in AuthMe session-restoration phrases.  This keeps hand-written
+     * rental configs compatible with AuthMe 6 while preserving an explicitly
+     * empty list as an intentional fail-closed choice.
+     */
+    private static List<String> mergeAuthenticationSuccessMessages(List<String> configured) {
+        if (configured.isEmpty()) {
+            return configured;
+        }
+        LinkedHashSet<String> merged = new LinkedHashSet<>(configured);
+        merged.addAll(DEFAULT_AUTH_SUCCESS_MESSAGES);
+        return List.copyOf(merged);
     }
 
     private static void validateUniqueUsernames(Map<String, BotDefinition> bots) {

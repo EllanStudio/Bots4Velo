@@ -247,6 +247,15 @@ class AuthenticationUiFlowTest {
     }
 
     @Test
+    void autoModeRequiresAnObservedAccountStateBeforeSubmittingCredentials() {
+        assertThat(BotSession.autoAuthenticationType(null)).isEmpty();
+        assertThat(BotSession.autoAuthenticationType(AuthenticationUiType.LOGIN))
+            .contains(AuthenticationUiType.LOGIN);
+        assertThat(BotSession.autoAuthenticationType(AuthenticationUiType.REGISTER))
+            .contains(AuthenticationUiType.REGISTER);
+    }
+
+    @Test
     void failedPrePlayCommandSubmissionDoesNotLockTheSentFlag() {
         AtomicBoolean sent = new AtomicBoolean();
         AtomicInteger attempts = new AtomicInteger();
