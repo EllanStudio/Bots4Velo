@@ -45,6 +45,9 @@ class ConfigLoaderTest {
         assertThat(config.bots().get("farm01").auth().successMessages()).anySatisfy(expression ->
             assertThat(java.util.regex.Pattern.compile(expression)
                 .matcher("Logged-in due to Session Reconnection.").find()).isTrue());
+        assertThat(config.bots().get("farm01").auth().successMessages()).anySatisfy(expression ->
+            assertThat(java.util.regex.Pattern.compile(expression)
+                .matcher("*** 已成功登录 ***").find()).isTrue());
         assertThat(config.bots().get("farm01").playerState()).isEqualTo(
             BotPluginConfig.PlayerStateConfig.unchanged());
     }

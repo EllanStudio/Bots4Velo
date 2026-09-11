@@ -42,12 +42,15 @@ import org.geysermc.mcprotocollib.protocol.packet.configuration.clientbound.Clie
 import org.geysermc.mcprotocollib.protocol.packet.cookie.clientbound.ClientboundCookieRequestPacket;
 import org.geysermc.mcprotocollib.protocol.packet.cookie.serverbound.ServerboundCookieResponsePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundDisguisedChatPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundShowDialogGamePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundStartConfigurationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundSetHealthPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.title.ClientboundSetSubtitleTextPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.title.ClientboundSetActionBarTextPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.title.ClientboundSetTitleTextPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
@@ -362,15 +365,47 @@ final class ModernBotTransport implements BotTransport {
             && health.getHealth() <= 0.0F && config.autoRespawn()) {
             scheduleRespawn(source);
         }
-        else if (packet instanceof ClientboundSystemChatPacket chat && !chat.isOverlay()) {
-            listener.onSystemMessage(PLAIN.serialize(chat.getContent()));
+        else {
+            String message = authenticationMessage(packet);
+            if (message != null) {
+                listener.onSystemMessage(message);
+            }
         }
-        else if (packet instanceof ClientboundSetTitleTextPacket title) {
-            listener.onSystemMessage(PLAIN.serialize(title.getText()));
+    }
+
+    /**
+     * AuthMe may deliver the same success/prompt through system chat, signed
+     * player chat, disguised chat, or a title/action-bar packet depending on
+     * server version and chat decoration settings. Keep all of those packets
+     * on the same plain-text path used by BotSession's configured matchers.
+     */
+    static String authenticationMessage(Packet packet) {
+        if (packet instanceof ClientboundSystemChatPacket chat) {
+            return PLAIN.serialize(chat.getContent());
         }
-        else if (packet instanceof ClientboundSetSubtitleTextPacket subtitle) {
-            listener.onSystemMessage(PLAIN.serialize(subtitle.getText()));
+        if (packet instanceof ClientboundPlayerChatPacket chat) {
+            if (chat.getUnsignedContent() != null) {
+                String unsigned = PLAIN.serialize(chat.getUnsignedContent());
+                if (!unsigned.isBlank()) {
+                    return unsigned;
+                }
+            }
+            String content = chat.getContent();
+            return content == null || content.isBlank() ? null : content;
         }
+        if (packet instanceof ClientboundDisguisedChatPacket chat) {
+            return PLAIN.serialize(chat.getMessage());
+        }
+        if (packet instanceof ClientboundSetTitleTextPacket title) {
+            return PLAIN.serialize(title.getText());
+        }
+        if (packet instanceof ClientboundSetSubtitleTextPacket subtitle) {
+            return PLAIN.serialize(subtitle.getText());
+        }
+        if (packet instanceof ClientboundSetActionBarTextPacket actionBar) {
+            return PLAIN.serialize(actionBar.getText());
+        }
+        return null;
     }
 
     void handleAuthenticationDialog(NbtMap dialog) {

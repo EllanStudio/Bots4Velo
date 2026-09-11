@@ -11,6 +11,15 @@ import io.netty.util.concurrent.OrderedEventExecutor;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
 import org.geysermc.mcprotocollib.network.ClientSession;
+import org.geysermc.mcprotocollib.protocol.data.game.Holder;
+import org.geysermc.mcprotocollib.protocol.data.game.chat.ChatFilterType;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundDisguisedChatPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerChatPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.title.ClientboundSetActionBarTextPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.title.ClientboundSetSubtitleTextPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.title.ClientboundSetTitleTextPacket;
+import net.kyori.adventure.text.Component;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -37,6 +46,29 @@ class ModernBotTransportAuthenticationUiTest {
         finally {
             sharedScheduler.shutdownNow();
         }
+    }
+
+    @Test
+    void normalizesAllAuthMeModernTextPacketVariants() {
+        String success = "*** 已成功登录 ***";
+
+        assertThat(ModernBotTransport.authenticationMessage(
+            new ClientboundSystemChatPacket(Component.text(success), false))).isEqualTo(success);
+        assertThat(ModernBotTransport.authenticationMessage(
+            new ClientboundPlayerChatPacket(0, UUID.randomUUID(), 0, new byte[0], success, 0L, 0L,
+                List.of(), Component.text(success), ChatFilterType.PASS_THROUGH, Holder.ofId(0),
+                Component.empty(), Component.empty()))).isEqualTo(success);
+        assertThat(ModernBotTransport.authenticationMessage(
+            new ClientboundDisguisedChatPacket(Component.text(success), Holder.ofId(0),
+                Component.empty(), Component.empty()))).isEqualTo(success);
+        assertThat(ModernBotTransport.authenticationMessage(
+            new ClientboundSetTitleTextPacket(Component.text(success)))).isEqualTo(success);
+        assertThat(ModernBotTransport.authenticationMessage(
+            new ClientboundSetSubtitleTextPacket(Component.text(success)))).isEqualTo(success);
+        assertThat(ModernBotTransport.authenticationMessage(
+            new ClientboundSetActionBarTextPacket(Component.text(success)))).isEqualTo(success);
+        assertThat(ModernBotTransport.authenticationMessage(
+            new ClientboundSystemChatPacket(Component.text(success), true))).isEqualTo(success);
     }
 
     @Test
