@@ -64,6 +64,30 @@ class ConfigLoaderTest {
     }
 
     @Test
+    void rentalStyleExplicitSuccessMessagesRetainAuthMeSessionRestorationSignals() {
+        BotPluginConfig config = parse("""
+            bots:
+              BOT_1:
+                username: BOT_1
+                password: secret
+                auth:
+                  success-messages:
+                    - '(?i)custom success'
+            """);
+
+        BotPluginConfig.AuthConfig auth = config.bots().get("bot_1").auth();
+        assertThat(auth.successMessages()).anySatisfy(expression ->
+            assertThat(java.util.regex.Pattern.compile(expression)
+                .matcher("Logged-in due to Session Reconnection.").find()).isTrue());
+        assertThat(auth.loginPrompts()).anySatisfy(expression ->
+            assertThat(java.util.regex.Pattern.compile(expression)
+                .matcher("Please login with /login").find()).isTrue());
+        assertThat(auth.registerPrompts()).anySatisfy(expression ->
+            assertThat(java.util.regex.Pattern.compile(expression)
+                .matcher("Please register").find()).isTrue());
+    }
+
+    @Test
     void resolvesBackendControlSecretFromEnvironmentBeforeLiteralValue() {
         BotPluginConfig config = parse("""
             runtime:
