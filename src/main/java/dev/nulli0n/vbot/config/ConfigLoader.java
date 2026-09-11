@@ -47,7 +47,9 @@ public final class ConfigLoader {
     private static final List<String> DEFAULT_AUTH_SUCCESS_MESSAGES = List.of(
         "(?i)(account registered successfully|successfully registered|logged in successfully|"
             + "login successful|successful login|successfully logged|logged-in due to session reconnection|"
-            + "login session continued|already logged in|^authenticated$|登录成功|注册成功|认证成功)"
+            + "login session continued|already logged in|^authenticated$|"
+            + "登录成功|注册成功|认证成功|已成功登录|已成功注册|成功登录|成功注册|"
+            + "已登录|已经登录|您已成功登录|您已经登录)"
     );
     /**
      * AuthMe's chat prompts are the account-state signal for AUTO mode.  Keep

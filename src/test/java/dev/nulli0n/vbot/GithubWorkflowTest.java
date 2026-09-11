@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class GithubWorkflowTest {
     @Test
-    void releaseDefaultsArePreparedForVersion303() throws Exception {
+    void releaseDefaultsArePreparedForCurrentMaintenanceLine() throws Exception {
         String build = Files.readString(Path.of("build.gradle.kts")).replace("\r\n", "\n");
         String verifier = Files.readString(Path.of("scripts/verify-local-integration.ps1")).replace("\r\n", "\n");
         String integration = Files.readString(Path.of("scripts/ci/run-network-integration.sh")).replace("\r\n", "\n");
@@ -32,8 +32,8 @@ class GithubWorkflowTest {
             .contains("\":adapters:modern-1_21_11:check\"")
             .contains("\":adapters:modern-26_1:check\"")
             .contains("\":adapters:modern-26_2:check\"");
-        assertThat(verifier).contains("$ExpectedPluginVersion = \"3.0.3\"");
-        assertThat(integration).contains("bots4velo-integration/3.0.3");
+        assertThat(verifier).contains("$ExpectedPluginVersion = \"3.0.6\"");
+        assertThat(integration).contains("bots4velo-integration/3.0.6");
         assertThat(readme)
             .contains("[中文文档 / Chinese documentation](README.zh-CN.md)")
             .contains("`bots4velo.jar`")
