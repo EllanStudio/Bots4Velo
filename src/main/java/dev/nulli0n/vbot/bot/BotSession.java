@@ -166,7 +166,8 @@ public final class BotSession implements BehaviorTarget {
             reconnectAttempts.get(), connectedAt, playEntries.get(), disconnects.get(),
             resourcePacksLoaded.get(), lastPlayAt, lastDisconnectAt, position(), lastAuthenticationUi.get(),
             authenticationUiPresentations.get(), authenticationUiSubmissions.get(), lastDisconnectReason,
-            behavior.snapshot(), onlineSeconds, FailureCategory.classify(lastDisconnectReason), events.snapshot());
+            behavior.snapshot(), onlineSeconds, FailureCategory.classify(lastDisconnectReason), events.snapshot(),
+            isAuthenticationComplete());
     }
 
     /** Estimated time of the next connection attempt, if one is currently scheduled. */

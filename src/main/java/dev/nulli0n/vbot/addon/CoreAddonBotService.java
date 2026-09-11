@@ -103,6 +103,6 @@ public final class CoreAddonBotService implements AddonBotService {
 
     private static AddonBotSnapshot snapshot(BotSnapshot snapshot) {
         return new AddonBotSnapshot(snapshot.id(), snapshot.username(),
-            AddonBotState.valueOf(snapshot.state().name()));
+            AddonBotState.valueOf(snapshot.state().name()), snapshot.authenticationComplete());
     }
 }
