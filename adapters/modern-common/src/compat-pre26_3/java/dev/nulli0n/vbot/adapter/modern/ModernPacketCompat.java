@@ -20,4 +20,8 @@ final class ModernPacketCompat {
     static Packet acceptTeleportation(int id, double x, double y, double z, float yaw, float pitch) {
         return new ServerboundAcceptTeleportationPacket(id);
     }
+
+    static Packet clientTickEnd() {
+        return null;
+    }
 }
