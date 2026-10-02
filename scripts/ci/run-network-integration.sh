@@ -352,6 +352,8 @@ online-mode=false
 enforce-secure-profile=false
 enable-status=true
 spawn-protection=0
+# 26.3 turned the whitelist on by default for newly generated servers.
+white-list=false
 view-distance=4
 simulation-distance=4
 max-players=10
