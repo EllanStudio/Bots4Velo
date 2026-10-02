@@ -13,6 +13,7 @@ class ProtocolVersionTest {
         assertThat(ProtocolVersion.parse("26.1").protocolId()).isEqualTo(775);
         assertThat(ProtocolVersion.parse("26.1.2").protocolId()).isEqualTo(775);
         assertThat(ProtocolVersion.parse("26.2").protocolId()).isEqualTo(776);
+        assertThat(ProtocolVersion.parse("26.3").protocolId()).isEqualTo(777);
     }
 
     @Test

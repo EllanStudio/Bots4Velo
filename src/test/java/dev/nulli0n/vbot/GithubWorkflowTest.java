@@ -88,7 +88,7 @@ class GithubWorkflowTest {
             .contains("run: chmod +x gradlew")
             .contains("run: ./gradlew clean check shadowJar writeArtifactChecksum")
             .contains("protocol-contract:")
-            .contains("protocol: [\"1.16.5\", \"1.21.11\", \"26.1.2\", \"26.2\"]")
+            .contains("protocol: [\"1.16.5\", \"1.21.11\", \"26.1.2\", \"26.2\", \"26.3\"]")
             .contains("run: ./gradlew :test --tests dev.nulli0n.vbot.protocol.ProtocolVersionTest "
                 + "-PciProtocol=\"${{ matrix.protocol }}\"")
             .contains("integration-network:")
@@ -97,6 +97,7 @@ class GithubWorkflowTest {
             .contains("minecraft: \"1.21.11\"")
             .contains("minecraft: \"26.1.2\"")
             .contains("minecraft: \"26.2\"")
+            .contains("minecraft: \"26.3\"")
             .contains("VELOCITY_JAVA=\"${JAVA_HOME_21_X64}/bin/java\"")
             .contains("scripts/ci/run-network-integration.sh");
     }

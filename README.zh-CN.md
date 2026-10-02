@@ -25,6 +25,7 @@ Bots4Velo 是一个运行在 Velocity 内的多协议无界面 Minecraft 客户�
 | `1.21.11` | 774 | Modern Login/Configuration/Play |
 | `26.1.2` | 775 | Modern Login/Configuration/Play |
 | `26.2` | 776 | Modern Login/Configuration/Play |
+| `26.3` | 777 | Modern Login/Configuration/Play |
 
 `protocol-version: "AUTO"` 会优先 ping 机器人目标后端，再选择协议。目标后端名称必须与 Velocity 的 `[servers]` 配置完全一致并区分大小写。
 

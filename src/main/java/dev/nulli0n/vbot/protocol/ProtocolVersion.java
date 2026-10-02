@@ -8,7 +8,8 @@ public enum ProtocolVersion {
     MINECRAFT_1_16_5("1.16.5", 754),
     MINECRAFT_1_21_11("1.21.11", 774),
     MINECRAFT_26_1_2("26.1.2", 775),
-    MINECRAFT_26_2("26.2", 776);
+    MINECRAFT_26_2("26.2", 776),
+    MINECRAFT_26_3("26.3", 777);
 
     private final String displayName;
     private final int protocolId;
@@ -42,6 +43,6 @@ public enum ProtocolVersion {
             .filter(version -> version.displayName.equalsIgnoreCase(requested))
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException(
-                "Unsupported protocol-version: " + raw + ". Expected AUTO, 1.16.5, 1.21.11, 26.1.2 or 26.2"));
+                "Unsupported protocol-version: " + raw + ". Expected AUTO, 1.16.5, 1.21.11, 26.1.2, 26.2 or 26.3"));
     }
 }

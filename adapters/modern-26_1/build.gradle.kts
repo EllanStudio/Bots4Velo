@@ -4,7 +4,10 @@ plugins {
 }
 
 java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
-sourceSets.main { java.srcDir("../modern-common/src/main/java") }
+sourceSets.main {
+    java.srcDir("../modern-common/src/main/java")
+    java.srcDir("../modern-common/src/compat-pre26_3/java")
+}
 repositories {
     mavenCentral(); maven("https://repo.opencollab.dev/main/"); maven("https://jitpack.io")
 }

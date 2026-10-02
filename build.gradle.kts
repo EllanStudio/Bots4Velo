@@ -96,7 +96,8 @@ tasks {
             ":adapters:legacy-1_16_5:shadowJar",
             ":adapters:modern-1_21_11:shadowJar",
             ":adapters:modern-26_1:shadowJar",
-            ":adapters:modern-26_2:shadowJar"
+            ":adapters:modern-26_2:shadowJar",
+            ":adapters:modern-26_3:shadowJar"
         )
         archiveBaseName.set("bots4velo")
         archiveClassifier.set("")
@@ -115,6 +116,7 @@ tasks {
         from(zipTree(layout.projectDirectory.file("adapters/modern-1_21_11/build/libs/modern-1_21_11.jar")))
         from(zipTree(layout.projectDirectory.file("adapters/modern-26_1/build/libs/modern-26_1.jar")))
         from(zipTree(layout.projectDirectory.file("adapters/modern-26_2/build/libs/modern-26_2.jar")))
+        from(zipTree(layout.projectDirectory.file("adapters/modern-26_3/build/libs/modern-26_3.jar")))
     }
 
     build {
@@ -140,7 +142,8 @@ tasks.check {
         ":adapters:legacy-1_16_5:check",
         ":adapters:modern-1_21_11:check",
         ":adapters:modern-26_1:check",
-        ":adapters:modern-26_2:check"
+        ":adapters:modern-26_2:check",
+        ":adapters:modern-26_3:check"
     )
 }
 
