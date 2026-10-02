@@ -99,6 +99,15 @@ wait_for_log() {
     grep -Eq "$pattern" "$file" 2>/dev/null && return 0
     sleep 1
   done
+  # Reconnect loops push the first failure out of the tail, so show the start
+  # of the log and the lobby console too.
+  printf '\n--- first 200 lines of %s ---\n' "$file"
+  head -n 200 "$file" 2>/dev/null || true
+  if [[ "$file" != "$WORK_ROOT/lobby/console.log" && -f "$WORK_ROOT/lobby/console.log" ]]; then
+    printf '\n--- last 120 lines of lobby console ---\n'
+    tail -n 120 "$WORK_ROOT/lobby/console.log" 2>/dev/null || true
+  fi
+  printf '\n--- last 160 lines of %s ---\n' "$file"
   tail -n 160 "$file" 2>/dev/null || true
   die "Did not find /$pattern/ in $file within ${timeout}s"
 }
