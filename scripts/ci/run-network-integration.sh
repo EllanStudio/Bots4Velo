@@ -190,8 +190,17 @@ download_authme() {
     return
   fi
   release_url="https://api.github.com/repos/AuthMe/AuthMeReloaded/releases/tags/$release"
-  url="$(curl --fail --retry 3 --connect-timeout 20 --max-time 90 --silent --show-error -H "User-Agent: $USER_AGENT" "$release_url" | \
-    "$PYTHON" -c '
+  # Unauthenticated GitHub API calls share a small per-IP rate limit on CI
+  # runners, so use the workflow token when one is provided.
+  local auth_header=()
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    auth_header=(-H "Authorization: Bearer $GITHUB_TOKEN")
+  fi
+  local release_json
+  release_json="$(curl --fail --retry 3 --connect-timeout 20 --max-time 90 --silent --show-error \
+    -H "User-Agent: $USER_AGENT" "${auth_header[@]}" "$release_url")" || \
+    die "Could not read AuthMe $release release metadata from $release_url"
+  url="$("$PYTHON" -c '
 import json
 import sys
 suffix = sys.argv[1]
@@ -199,7 +208,7 @@ for asset in json.load(sys.stdin).get("assets", []):
     if asset.get("name", "").endswith(suffix):
         print(asset["browser_download_url"])
         break
-' "$suffix")"
+' "$suffix" <<<"$release_json")"
   [[ -n "$url" ]] || die "AuthMe $release asset ending in $suffix was not found"
   record_resolution "AuthMe $release" "$url"
   curl --fail --retry 3 --connect-timeout 20 --max-time 180 --location --silent --show-error -H "User-Agent: $USER_AGENT" \

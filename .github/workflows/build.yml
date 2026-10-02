@@ -115,6 +115,8 @@ jobs:
           java-version: "${{ matrix.server-java }}"
 
       - name: Start and verify the disposable network
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           chmod +x scripts/ci/run-network-integration.sh
           VELOCITY_VERSION="${{ matrix.velocity }}" VELOCITY_JAVA="${JAVA_HOME_${{ matrix.velocity-java }}_X64}/bin/java" scripts/ci/run-network-integration.sh "${{ matrix.minecraft }}" "${{ matrix.protocol }}"
