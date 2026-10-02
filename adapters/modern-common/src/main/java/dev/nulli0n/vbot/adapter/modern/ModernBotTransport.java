@@ -250,7 +250,7 @@ final class ModernBotTransport implements BotTransport {
             x = newX;
             y = newY;
             z = newZ;
-            active.send(new ServerboundMovePlayerPosRotPacket(false, false, x, y, z, yaw, pitch));
+            sendPosition(active, new ServerboundMovePlayerPosRotPacket(false, false, x, y, z, yaw, pitch));
             return true;
         }
     }
@@ -267,7 +267,7 @@ final class ModernBotTransport implements BotTransport {
             }
             yaw = newYaw;
             pitch = newPitch;
-            active.send(new ServerboundMovePlayerPosRotPacket(false, false, x, y, z, yaw, pitch));
+            sendPosition(active, new ServerboundMovePlayerPosRotPacket(false, false, x, y, z, yaw, pitch));
             return true;
         }
     }
@@ -290,7 +290,7 @@ final class ModernBotTransport implements BotTransport {
                 return false;
             }
             y += 0.42D;
-            active.send(new ServerboundMovePlayerPosRotPacket(false, false, x, y, z, yaw, pitch));
+            sendPosition(active, new ServerboundMovePlayerPosRotPacket(false, false, x, y, z, yaw, pitch));
             return true;
         }
     }
@@ -820,8 +820,18 @@ final class ModernBotTransport implements BotTransport {
             yaw = relative.contains(PositionElement.Y_ROT) ? yaw + packet.getYRot() : packet.getYRot();
             pitch = relative.contains(PositionElement.X_ROT) ? pitch + packet.getXRot() : packet.getXRot();
             positionKnown.set(true);
-            source.send(ModernPacketCompat.acceptTeleportation(packet.getId(), x, y, z, yaw, pitch));
-            source.send(new ServerboundMovePlayerPosRotPacket(false, false, x, y, z, yaw, pitch));
+            sendPosition(source, ModernPacketCompat.acceptTeleportation(packet.getId(), x, y, z, yaw, pitch));
+            sendPosition(source, new ServerboundMovePlayerPosRotPacket(false, false, x, y, z, yaw, pitch));
+        }
+    }
+
+    // Callers hold movementLock, so each position packet is followed by its own
+    // tick end before the next one is sent.
+    private static void sendPosition(Session target, Packet packet) {
+        target.send(packet);
+        Packet tickEnd = ModernPacketCompat.clientTickEnd();
+        if (tickEnd != null) {
+            target.send(tickEnd);
         }
     }
 
