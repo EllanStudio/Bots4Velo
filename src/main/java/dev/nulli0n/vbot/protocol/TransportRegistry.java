@@ -20,6 +20,8 @@ public final class TransportRegistry {
             "dev.nulli0n.vbot.adapter.v26_1_2.ModernTransportFactory");
         factories.put(ProtocolVersion.MINECRAFT_26_2,
             "dev.nulli0n.vbot.adapter.v26_2.ModernTransportFactory");
+        factories.put(ProtocolVersion.MINECRAFT_26_3,
+            "dev.nulli0n.vbot.adapter.v26_3.ModernTransportFactory");
         factories.put(ProtocolVersion.MINECRAFT_1_16_5,
             "dev.nulli0n.vbot.adapter.v1_16_5.LegacyTransportFactory");
     }

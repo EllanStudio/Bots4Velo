@@ -18,6 +18,7 @@ public final class ProtocolSmokeMain {
         verify(registry, ProtocolVersion.MINECRAFT_1_21_11);
         verify(registry, ProtocolVersion.MINECRAFT_26_1_2);
         verify(registry, ProtocolVersion.MINECRAFT_26_2);
+        verify(registry, ProtocolVersion.MINECRAFT_26_3);
     }
 
     private static void verify(TransportRegistry registry, ProtocolVersion expected) {

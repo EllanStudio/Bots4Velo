@@ -25,6 +25,7 @@ The screenshots are illustrative only. Server-authoritative invulnerability, gam
 | `1.21.11` | 774 | Modern Login/Configuration/Play |
 | `26.1.2` | 775 | Modern Login/Configuration/Play |
 | `26.2` | 776 | Modern Login/Configuration/Play |
+| `26.3` | 777 | Modern Login/Configuration/Play |
 
 `protocol-version: "AUTO"` pings the bot's target backend before selecting an adapter. Backend names must exactly match Velocity's `[servers]` entries, including case.
 
