@@ -155,12 +155,16 @@ download_fill_artifact() {
   url="$("$PYTHON" -c '
 import json
 import sys
-for build in json.load(sys.stdin):
-    if build.get("channel") == "STABLE":
-        print(build["downloads"]["server:default"]["url"])
-        break
+# Prefer the newest STABLE build. A freshly released Minecraft version may
+# only have BETA/ALPHA builds, so fall back to the newest build of any channel.
+builds = json.load(sys.stdin)
+chosen = next((b for b in builds if b.get("channel") == "STABLE"), builds[0] if builds else None)
+if chosen is not None:
+    if chosen.get("channel") != "STABLE":
+        print("WARNING: no stable build, using " + str(chosen.get("channel")) + " build " + str(chosen.get("id")), file=sys.stderr)
+    print(chosen["downloads"]["server:default"]["url"])
 ' <<<"$response")"
-  [[ -n "$url" ]] || die "No stable $project build exists for $version"
+  [[ -n "$url" ]] || die "No $project build exists for $version"
   record_resolution "$project $version" "$url"
   curl --fail --retry 5 --retry-all-errors --connect-timeout 20 --max-time 240 --location --silent --show-error -H "User-Agent: $USER_AGENT" \
     --output "$destination" "$url"
