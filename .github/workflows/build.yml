@@ -68,18 +68,29 @@ jobs:
           - minecraft: "1.16.5"
             protocol: "754"
             server-java: "16"
+            velocity: "3.5.0-SNAPSHOT"
+            velocity-java: "21"
           - minecraft: "1.21.11"
             protocol: "774"
             server-java: "21"
+            velocity: "3.5.0-SNAPSHOT"
+            velocity-java: "21"
           - minecraft: "26.1.2"
             protocol: "775"
             server-java: "25"
+            velocity: "3.5.0-SNAPSHOT"
+            velocity-java: "21"
           - minecraft: "26.2"
             protocol: "776"
             server-java: "25"
+            velocity: "3.5.0-SNAPSHOT"
+            velocity-java: "21"
           - minecraft: "26.3"
             protocol: "777"
             server-java: "25"
+            # Velocity 3.x stops at 26.2; 26.3 needs Velocity 4 on Java 25.
+            velocity: "4.2.1-SNAPSHOT"
+            velocity-java: "25"
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -106,7 +117,7 @@ jobs:
       - name: Start and verify the disposable network
         run: |
           chmod +x scripts/ci/run-network-integration.sh
-          VELOCITY_JAVA="${JAVA_HOME_21_X64}/bin/java" scripts/ci/run-network-integration.sh "${{ matrix.minecraft }}" "${{ matrix.protocol }}"
+          VELOCITY_VERSION="${{ matrix.velocity }}" VELOCITY_JAVA="${JAVA_HOME_${{ matrix.velocity-java }}_X64}/bin/java" scripts/ci/run-network-integration.sh "${{ matrix.minecraft }}" "${{ matrix.protocol }}"
 
       - name: Upload integration logs
         if: always()

@@ -14,6 +14,7 @@ VELOCITY_PLUGIN_JAR="${VELOCITY_PLUGIN_JAR:-$PWD/build/libs/bots4velo-[0-9]*.jar
 PAPER_COMPANION_JAR="${PAPER_COMPANION_JAR:-$PWD/build/libs/bots4velo-paper-*.jar}"
 PAPER_JAVA="${PAPER_JAVA:-${JAVA_HOME:-}/bin/java}"
 VELOCITY_JAVA="${VELOCITY_JAVA:-$PAPER_JAVA}"
+VELOCITY_VERSION="${VELOCITY_VERSION:-3.5.0-SNAPSHOT}"
 PYTHON="${PYTHON:-python3}"
 USER_AGENT="bots4velo-integration/3.0.6 (https://github.com/EllanServer/Bots4Velo)"
 AUTHMEUI_VERSION="1.3.4"
@@ -583,9 +584,9 @@ fi
 if [[ -n "${VELOCITY_JAR:-}" ]]; then
   [[ -f "$VELOCITY_JAR" ]] || die "VELOCITY_JAR does not exist: $VELOCITY_JAR"
   cp "$VELOCITY_JAR" "$WORK_ROOT/velocity.jar"
-  artifact_identity "velocity 3.5.0-SNAPSHOT" "$WORK_ROOT/velocity.jar"
+  artifact_identity "velocity $VELOCITY_VERSION" "$WORK_ROOT/velocity.jar"
 else
-  download_fill_artifact velocity "3.5.0-SNAPSHOT" "$WORK_ROOT/velocity.jar"
+  download_fill_artifact velocity "$VELOCITY_VERSION" "$WORK_ROOT/velocity.jar"
 fi
 
 case "$MINECRAFT_VERSION" in
