@@ -24,6 +24,8 @@ tasks.shadowJar {
     mergeServiceFiles()
     relocate("dev.nulli0n.vbot.adapter.modern", "dev.nulli0n.vbot.adapter.v1_21_11")
     relocate("org.geysermc.mcprotocollib", "dev.nulli0n.vbot.adapter.v1_21_11.lib.mcpl")
+    // text-serializer-nbt ships in every MCPL version; unrelocated, only one copy survives the merged JAR.
+    relocate("org.geysermc.adventure", "dev.nulli0n.vbot.adapter.v1_21_11.lib.geyseradventure")
     relocate("org.cloudburstmc", "dev.nulli0n.vbot.adapter.v1_21_11.lib.cloudburst")
     relocate("io.netty", "dev.nulli0n.vbot.adapter.v1_21_11.lib.netty")
     relocate("it.unimi.dsi.fastutil", "dev.nulli0n.vbot.adapter.v1_21_11.lib.fastutil")
