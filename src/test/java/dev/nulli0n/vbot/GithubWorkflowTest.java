@@ -98,7 +98,9 @@ class GithubWorkflowTest {
             .contains("minecraft: \"26.1.2\"")
             .contains("minecraft: \"26.2\"")
             .contains("minecraft: \"26.3\"")
-            .contains("VELOCITY_JAVA=\"${JAVA_HOME_21_X64}/bin/java\"")
+            .contains("VELOCITY_VERSION=\"${{ matrix.velocity }}\"")
+            .contains("VELOCITY_JAVA=\"${JAVA_HOME_${{ matrix.velocity-java }}_X64}/bin/java\"")
+            .contains("velocity: \"4.2.1-SNAPSHOT\"")
             .contains("scripts/ci/run-network-integration.sh");
     }
 
