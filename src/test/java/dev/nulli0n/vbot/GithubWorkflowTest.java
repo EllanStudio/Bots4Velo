@@ -75,6 +75,25 @@ class GithubWorkflowTest {
     }
 
     @Test
+    void patchReleaseWorkflowIsManualAndKeepsReleaseGuards() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/build-patch-release.yml")).replace("\r\n", "\n");
+        Object parsed = new Yaml(new SafeConstructor(new LoaderOptions())).load(workflow);
+
+        assertThat(parsed).isInstanceOf(Map.class);
+        assertThat(workflow)
+            .contains("workflow_dispatch:")
+            .doesNotContain("tags:")
+            .contains("permissions:\n  contents: write")
+            .contains("quality-gate:\n    uses: ./.github/workflows/build.yml")
+            .contains("needs: quality-gate")
+            .contains("Major releases use build-major-release.yml")
+            .contains("run: ./gradlew clean test shadowJar -PpluginVersion=\"$VERSION\"")
+            .contains("run: ./gradlew verifyShadowJar -PpluginVersion=\"$VERSION\"")
+            .contains("run: ./gradlew writeArtifactChecksum -PpluginVersion=\"$VERSION\"")
+            .contains("--notes-file \"docs/releases/v$VERSION.md\"");
+    }
+
+    @Test
     void normalBuildWorkflowValidatesCommitsAndPullRequests() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/build.yml")).replace("\r\n", "\n");
         Object parsed = new Yaml(new SafeConstructor(new LoaderOptions())).load(workflow);
