@@ -9,10 +9,11 @@ sourceSets.main {
     java.srcDir("../modern-common/src/compat-pre26_3/java")
 }
 repositories {
+    // Use direct Central for stable Adventure artifacts; Paper/OpenCollab own the game APIs.
+    maven("https://repo1.maven.org/maven2/")
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://repo.opencollab.dev/main/")
     maven("https://jitpack.io")
-    maven("https://repo1.maven.org/maven2/")
 }
 dependencies {
     compileOnly(project(":transport-api"))
