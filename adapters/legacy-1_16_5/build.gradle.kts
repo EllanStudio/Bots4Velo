@@ -5,7 +5,10 @@ plugins {
 
 java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 repositories {
-    mavenCentral(); maven("https://jitpack.io")
+    maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.opencollab.dev/main/")
+    maven("https://jitpack.io")
+    maven("https://repo1.maven.org/maven2/")
 }
 dependencies {
     compileOnly(project(":transport-api"))

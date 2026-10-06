@@ -12,7 +12,10 @@ sourceSets {
     test { java.srcDir("../modern-common/src/test/java") }
 }
 repositories {
-    mavenCentral(); maven("https://repo.opencollab.dev/main/"); maven("https://jitpack.io")
+    maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.opencollab.dev/main/")
+    maven("https://jitpack.io")
+    maven("https://repo1.maven.org/maven2/")
 }
 dependencies {
     compileOnly(project(":transport-api"))

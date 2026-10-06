@@ -48,10 +48,15 @@ sourceSets {
 }
 
 repositories {
-    mavenCentral()
+    // Velocity 3.4.0 and TAB-API 6.0.0 are published outside Maven Central.
+    // Resolve their owning repositories first so an unavailable Central mirror
+    // cannot block the actual 26.3 build dependencies.
     maven("https://repo.papermc.io/repository/maven-public/")
-    maven("https://repo.opencollab.dev/main/")
     maven("https://jitpack.io")
+    maven("https://repo.opencollab.dev/main/")
+    // Paper's public proxy is used above for Maven Central artifacts as well.
+    // Keep repo1 as a direct fallback because Central intermittently times out here.
+    maven("https://repo1.maven.org/maven2/")
 }
 
 dependencies {
