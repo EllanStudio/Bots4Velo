@@ -10,6 +10,11 @@ import dev.nulli0n.vbot.transport.TransportConfig;
 import dev.nulli0n.vbot.transport.TransportListener;
 import dev.nulli0n.vbot.transport.TransportState;
 import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.NBTComponent;
+import net.kyori.adventure.text.ScoreComponent;
+import net.kyori.adventure.text.SelectorComponent;
+import net.kyori.adventure.text.flattener.ComponentFlattener;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.cloudburstmc.math.vector.Vector3d;
 import org.cloudburstmc.nbt.NbtMap;
@@ -71,7 +76,31 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 final class ModernBotTransport implements BotTransport {
-    private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
+    /**
+     * The stock plain serializer throws on score, selector and NBT components, and servers do put those in
+     * join messages and action bars. An exception there reaches the packet listener and disconnects the bot,
+     * so unsupported components are flattened to their raw text and a failure never leaves this method.
+     */
+    private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.builder()
+        .flattener(ComponentFlattener.basic().toBuilder()
+            .mapper(ScoreComponent.class, ScoreComponent::name)
+            .mapper(SelectorComponent.class, SelectorComponent::pattern)
+            .mapper(NBTComponent.class, NBTComponent::nbtPath)
+            .unknownMapper(unknown -> "")
+            .build())
+        .build();
+
+    static String plain(Component component) {
+        if (component == null) {
+            return "";
+        }
+        try {
+            return PLAIN.serialize(component);
+        }
+        catch (RuntimeException unsupported) {
+            return "";
+        }
+    }
     private static final String AUTHME_LOGIN_ACTION = "authme:prejoin-login/submit";
     private static final String AUTHME_REGISTER_ACTION = "authme:prejoin-register/submit";
     private static final String AUTHME_UI_LOGIN_ACTION = "authmeui:action/login";
@@ -378,11 +407,11 @@ final class ModernBotTransport implements BotTransport {
      */
     static String authenticationMessage(Packet packet) {
         if (packet instanceof ClientboundSystemChatPacket chat) {
-            return PLAIN.serialize(chat.getContent());
+            return plain(chat.getContent());
         }
         if (packet instanceof ClientboundPlayerChatPacket chat) {
             if (chat.getUnsignedContent() != null) {
-                String unsigned = PLAIN.serialize(chat.getUnsignedContent());
+                String unsigned = plain(chat.getUnsignedContent());
                 if (!unsigned.isBlank()) {
                     return unsigned;
                 }
@@ -391,16 +420,16 @@ final class ModernBotTransport implements BotTransport {
             return content == null || content.isBlank() ? null : content;
         }
         if (packet instanceof ClientboundDisguisedChatPacket chat) {
-            return PLAIN.serialize(chat.getMessage());
+            return plain(chat.getMessage());
         }
         if (packet instanceof ClientboundSetTitleTextPacket title) {
-            return PLAIN.serialize(title.getText());
+            return plain(title.getText());
         }
         if (packet instanceof ClientboundSetSubtitleTextPacket subtitle) {
-            return PLAIN.serialize(subtitle.getText());
+            return plain(subtitle.getText());
         }
         if (packet instanceof ClientboundSetActionBarTextPacket actionBar) {
-            return PLAIN.serialize(actionBar.getText());
+            return plain(actionBar.getText());
         }
         return null;
     }
@@ -863,7 +892,7 @@ final class ModernBotTransport implements BotTransport {
         @Override
         public void disconnected(DisconnectedEvent event) {
             session = null;
-            listener.onDisconnected(PLAIN.serialize(event.getReason()), event.getCause());
+            listener.onDisconnected(plain(event.getReason()), event.getCause());
         }
     }
 }
