@@ -13,8 +13,10 @@ java {
 }
 
 repositories {
-    mavenCentral()
+    // Paper's proxy serves the legacy API and its Adventure transitive graph.
+    // Keep a direct Maven fallback without letting Central timeouts mask it.
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo1.maven.org/maven2/")
 }
 
 dependencies {
